@@ -22,6 +22,12 @@ public class config {
     @Parameter(names = {"-u", "--usage"}, description = "Show ALL usage", order = 5)
     public static boolean showUsage =false;
 
+    @Parameter(names = {"-d", "--dry-run"}, description = "Dry run mode: validate routes without starting server", order = 6)
+    public static boolean dryRun = false;
+
+    @Parameter(names = {"--test-routes"}, description = "Test routes (comma separated)", order = 7)
+    public static String testRoutes = "";
+
 
 
     @Parameter(names = {"-h", "--help"}, help = true, description = "Show this help")

